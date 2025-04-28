@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crime Record Management</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+      font-size: 16px;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    form {
+      max-width: 500px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #editModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #editModal form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    }
+    .action-buttons button {
+      margin: 2px;
+      width: auto;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Crime Record Management System</h1>
+
+  <table id="crimeTable">
+    <thead>
+      <tr>
+        <th>Crime ID</th>
+        <th>Type</th>
+        <th>Location</th>
+        <th>Date & Time</th>
+        <th>Status</th>
+        <th>Officer</th>
+        <th>Rank</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Add New Crime</h2>
+  <form id="addCrimeForm">
+    <input type="text" name="crime_type" placeholder="Crime Type" required>
+    <input type="text" name="crime_location" placeholder="Crime Location" required>
+    <input type="datetime-local" name="crime_datetime" required>
+    <input type="text" name="description" placeholder="Description" required>
+    <input type="text" name="status" placeholder="Case Status" required>
+    <input type="text" name="crime_ID" placeholder="Crime_ID" required>
+    <button type="submit">Add Crime</button>
+  </form>
+
+  <!-- Edit Modal -->
+  <div id="editModal">
+    <form id="editCrimeForm">
+      <h2>Edit Crime</h2>
+      <input type="hidden" name="crime_id">
+      <input type="text" name="crime_type" placeholder="Crime Type" required>
+      <input type="text" name="crime_location" placeholder="Crime Location" required>
+      <input type="datetime-local" name="crime_datetime" required>
+      <input type="text" name="status" placeholder="Case Status" required>
+      <button type="submit">Update Crime</button>
+      <button type="button" onclick="closeEditModal()" style="background-color: #e74c3c;">Cancel</button>
+    </form>
+  </div>
+
+  <script>
+    function loadCrimes() {
+      fetch('api.php')
+        .then(response => response.json())
+        .then(data => {
+          const tbody = document.querySelector("#crimeTable tbody");
+          tbody.innerHTML = "";
+
+          data.forEach(crime => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+              <td>${crime.Crime_ID}</td>
+              <td>${crime.Crime_Type}</td>
+              <td>${crime.Crime_Location}</td>
+              <td>${crime.Crime_Date_Time}</td>
+              <td>${crime.Status}</td>
+              <td>${crime.Officer_Name}</td>
+              <td>${crime.Officer_Rank}</td>
+              <td class="action-buttons">
+                <button onclick="editCrime(${crime.Crime_ID})">Edit</button>
+                <button onclick="deleteCrime(${crime.Crime_ID})" style="background-color: #e74c3c;">Delete</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+    }
+
+    document.getElementById("addCrimeForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      fetch('add.php', {
+        method: 'POST',
+        body: formData
+      }).then(() => {
+        loadCrimes();
+        this.reset();
+      });
+    });
+
+    function editCrime(id) {
+      const form = document.getElementById("editCrimeForm");
+      const row = [...document.querySelectorAll("#crimeTable tbody tr")].find(r => r.children[0].innerText == id);
+
+      form.crime_id.value = id;
+      form.crime_type.value = row.children[1].innerText;
+      form.crime_location.value = row.children[2].innerText;
+      form.crime_datetime.value = new Date(row.children[3].innerText).toISOString().slice(0,16);
+      form.status.value = row.children[4].innerText;
+
+      document.getElementById("editModal").style.display = "flex";
+    }
+
+    function closeEditModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    document.getElementById("editCrimeForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      fetch('edit.php', {
+        method: 'POST',
+        body: formData
+      }).then(() => {
+        loadCrimes();
+        closeEditModal();
+      });
+    });
+
+    function deleteCrime(id) {
+      if (confirm("Are you sure you want to delete this crime?")) {
+        fetch('delete.php', {
+          method: 'POST',
+          body: new URLSearchParams({crime_id: id})
+        }).then(() => {
+          loadCrimes();
+        });
+      }
+    }
+
+    loadCrimes();
+  </script>
+
+</body>
+</html>
